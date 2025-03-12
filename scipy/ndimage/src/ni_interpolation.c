@@ -420,10 +420,16 @@ NI_GeometricTransform(PyArrayObject *input, int (*map)(npy_intp*, double*,
             /* do an affine transformation: */
             npy_double *p = matrix;
             for(hh = 0; hh < irank; hh++) {
-                icoor[hh] = 0.0;
-                for(ll = 0; ll < orank; ll++)
-                    icoor[hh] += io.coordinates[ll] * *p++;
-                icoor[hh] += shift[hh];
+                double sum = shift[hh];
+                ll = 0;
+                for (; ll + 1 < orank; ll += 2) {
+                    sum += io.coordinates[ll] * *p++;
+                    sum += io.coordinates[ll + 1] * *p++;
+                }
+                if (ll < orank) {
+                    sum += io.coordinates[ll] * *p++;
+                }
+                icoor[hh] = sum;
             }
         } else if (coordinates) {
             /* mapping is from an coordinates array: */
@@ -508,7 +514,9 @@ NI_GeometricTransform(PyArrayObject *input, int (*map)(npy_intp*, double*,
                         edge_offsets[hh] = NULL;
                     }
                 }
-                get_spline_interpolation_weights(cc, order, splvals[hh]);
+                if(order!=0){
+                    get_spline_interpolation_weights(cc, order, splvals[hh]);
+                }
             } else {
                 /* we use the constant border condition: */
                 constant = 1;
